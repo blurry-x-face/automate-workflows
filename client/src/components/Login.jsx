@@ -1,6 +1,8 @@
 import React from "react";
 import axios from "axios";
 import { useCookies } from "react-cookie";
+import { Input } from "antd";
+import { Button } from "antd";
 
 export default function Login({ isLogin }) {
   const [email, setEmail] = React.useState("");
@@ -28,18 +30,26 @@ export default function Login({ isLogin }) {
 
   return (
     <div>
-      <input
+      <Input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      <input
+      <Input
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
       <br />
-      <button onClick={doSomething}>{isLogin ? "Login" : "Register"}</button>
+      <Button
+        type="primary"
+        shape="round"
+        // icon={<DownloadOutlined />}
+        // size={size}
+        onClick={doSomething}
+      >
+        {isLogin ? "Login" : "Register"}
+      </Button>
     </div>
   );
 }

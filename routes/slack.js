@@ -222,9 +222,10 @@ function getCCstring(access_token,useremail_array){
 
 router.get("/send", withAuth, async (req, res) => {
   // temporary user email array
-  const temp_useremail = ['mansisharma78562@gmail.com','lit2019023@iiitl.ac.in' ];
+ // const temp_useremail = ['mansisharma78562@gmail.com','lit2019023@iiitl.ac.in' ];
   // get aupid
-  const _id = req.cookies.currentaup;
+  console.log(req.body);
+  /*const _id = req.cookies.currentaup;
  // find aup in database
     const getAup = await Aup.findById({ _id });
     if (!getAup) {
@@ -240,7 +241,7 @@ router.get("/send", withAuth, async (req, res) => {
    if(!cc_list) return res.send(500);
    console.log(cc_list);
   return;
-  /*  channel_id.map(async (v, i) => {
+   channel_id.map(async (v, i) => {
       try {
         const slackToken = access_token;
         const url = "https://slack.com/api/chat.postMessage";
@@ -306,9 +307,9 @@ router.get("/send", withAuth, async (req, res) => {
 });
 
 router.post("/getchannelid", withAuth, async (req, res) => {
-  const channel_id = req.body._id;
+  //const channel_id = req.body._id;
   //console.log("yaay");
-  console.log(channel_id);
+  //console.log(channel_id);
   try {
     const _id = req.cookies.currentaup;
     const getAup = await Aup.findById({ _id });

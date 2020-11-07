@@ -16,7 +16,7 @@ var base64 = require("js-base64").Base64;
 const {
   client_secret,
   client_id,
-  redirect_uris
+  redirect_uris,
 } = require("../config/keys").web;
 const oAuth2Client = new google.auth.OAuth2(
   client_id,
@@ -28,7 +28,7 @@ router.get("/", (req, res) => {
   // Check if we have previously stored a token.
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: "offline",
-    scope: SCOPES
+    scope: SCOPES,
   });
   res.redirect(authUrl);
 });
@@ -101,10 +101,10 @@ router.post(
         userId: "me",
         resource: {
           topicName: keys.topicName,
-          labelIds
-        }
+          labelIds,
+        },
       },
-      async function(err, response) {
+      async function (err, response) {
         if (err) {
           console.log("setWatch", err);
           return;
@@ -126,9 +126,9 @@ router.post("/gmail/watch/stop", withAuth, async (req, res) => {
   const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
   gmail.users.stop(
     {
-      userId: "me"
+      userId: "me",
     },
-    async function(err, response) {
+    async function (err, response) {
       if (err) {
         console.log("stoppppppppppppp", err);
         return;
@@ -148,7 +148,7 @@ async function listAllTopics() {
   const [topics] = await pubSubClient.getTopics();
   const [subcriptions] = await pubSubClient.getSubscriptions();
   // console.log("Subs:");
-  subcriptions.forEach(topic => console.log(topic.name));
+  subcriptions.forEach((topic) => console.log(topic.name));
   const topic = topics[0];
   console.log(`Topic ${topic.name} created.`);
 
@@ -156,14 +156,14 @@ async function listAllTopics() {
   const subscription = subcriptions[0];
 
   // Receive callbacks for new messages on the subscription
-  subscription.on("message", async message => {
+  subscription.on("message", async (message) => {
     try {
       message.ack();
       console.log("Received message:", message.data.toString());
       console.log(JSON.parse(message.data));
       const gID = JSON.parse(message.data).emailAddress;
       const workflows = await Aup.find({ gmailID: gID });
-      workflows.forEach(async workflow => {
+      workflows.forEach(async (workflow) => {
         // workflow.forEach(async ())
         oAuth2Client.setCredentials(workflow.gmailToken);
         const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
@@ -172,7 +172,7 @@ async function listAllTopics() {
             userId: "me",
             historyTypes: new Enum(["LABEL_ADDED"]),
             labelId: "STARRED",
-            startHistoryId: workflow.historyID
+            startHistoryId: workflow.historyID,
           },
           async (err, response) => {
             if (err || response.status !== 200) {
@@ -184,14 +184,15 @@ async function listAllTopics() {
             workflow.historyID = response.data.historyId;
             await workflow.save();
             if (response.data.history)
-              response.data.history.map(hist => {
+              response.data.history.map((hist) => {
                 gmail.users.messages.get(
                   { userId: "me", id: hist.messages[0].id },
                   (err, rep) => {
                     if (err) console.log(err);
                     const body = rep.data.payload.parts[0].body.data;
+                    var htmlBody = "";
                     if (body) {
-                      var htmlBody = base64.decode(
+                      htmlBody = base64.decode(
                         body.replace(/-/g, "+").replace(/_/g, "/")
                       );
                       console.log(htmlBody);
@@ -203,21 +204,27 @@ async function listAllTopics() {
                     headers.From = headers.From.match(/<.*>/)[0]
                       .replace(/</, "")
                       .replace(/>/, "");
-                    console.log(headers.From, headers.Subject);
-                    axios.post("http://localhost:4000/api/slack/send", {
-                      aupId : workflow._id,
-                      From: headers.From,
-                      subject: headers.subject
-                    }).then((res)=>{
-                      if(res.status == 200)console.log("message sent succesfully");
-                    }). catch ((err) => {
-                      console.log(err) ;
-                    });
-                    // const sub = rep.data.payload.headers.map((v) =>
-                    //   console.log(v)
-                    // );
-                    // console.log(rep.data);
-                    // console.log(base64decode(rep.data.payload.body.data));
+                    let cc = [];
+                    console.log(headers.Cc);
+                    if (headers.Cc)
+                      cc = headers.Cc.match(
+                        /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
+                      );
+                    axios
+                      .post("http://localhost:4000/api/slack/send", {
+                        aupId: workflow._id,
+                        From: headers.From,
+                        subject: headers.Subject,
+                        cc,
+                        msgBody: htmlBody,
+                      })
+                      .then((res) => {
+                        if (res.status == 200)
+                          console.log("message sent succesfully");
+                      })
+                      .catch((err) => {
+                        // console.log(err);
+                      });
                   }
                 );
               });
@@ -230,7 +237,7 @@ async function listAllTopics() {
     }
   });
 
-  subscription.on("error", error => {
+  subscription.on("error", (error) => {
     console.error("Received error:", error);
   });
 }

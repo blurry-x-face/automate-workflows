@@ -220,7 +220,7 @@ function getCCstring(access_token,useremail_array){
 
 
 
-router.get("/send", withAuth, async (req, res) => {
+router.post("/send", async (req, res) => {
   // temporary user email array
  // const temp_useremail = ['mansisharma78562@gmail.com','lit2019023@iiitl.ac.in' ];
   // get aupid

@@ -150,7 +150,7 @@ async function listAllTopics() {
   // console.log("Subs:");
   subcriptions.forEach((topic) => console.log(topic.name));
   const topic = topics[0];
-  console.log(`Topic ${topic.name} created.`);
+//  console.log(`Topic ${topic.name} created.`);
 
   // Creates a subscription on that new topic
   const subscription = subcriptions[0];
@@ -159,8 +159,8 @@ async function listAllTopics() {
   subscription.on("message", async (message) => {
     try {
       message.ack();
-      console.log("Received message:", message.data.toString());
-      console.log(JSON.parse(message.data));
+    //  console.log("Received message:", message.data.toString());
+        console.log(JSON.parse(message.data));
       const gID = JSON.parse(message.data).emailAddress;
       const workflows = await Aup.find({ gmailID: gID });
       workflows.forEach(async (workflow) => {
@@ -195,7 +195,7 @@ async function listAllTopics() {
                       htmlBody = base64.decode(
                         body.replace(/-/g, "+").replace(/_/g, "/")
                       );
-                      console.log(htmlBody);
+              //        console.log(htmlBody);
                     }
                     const headers = {};
                     rep.data.payload.headers.map(
@@ -205,7 +205,7 @@ async function listAllTopics() {
                       .replace(/</, "")
                       .replace(/>/, "");
                     let cc = [];
-                    console.log(headers.Cc);
+                 //   console.log(headers.Cc);
                     if (headers.Cc)
                       cc = headers.Cc.match(
                         /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
@@ -230,7 +230,7 @@ async function listAllTopics() {
               });
           }
         );
-        console.log(workflow._id, workflow.historyID);
+  //      console.log(workflow._id, workflow.historyID);
       });
     } catch (error) {
       console.log(error.message);

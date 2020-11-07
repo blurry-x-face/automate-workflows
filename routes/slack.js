@@ -83,7 +83,7 @@ router.get("/getChannelList", withAuth, async function(req, res) {
 
 
 
-router.get("/getcc", withAuth, (req, res) => {
+/*router.get("/getcc", withAuth, (req, res) => {
   const { code } = req.query;
   console.log(code);
   const url = `https://slack.com/api/oauth.v2.access?client_id=${keys.slackClientID}&client_secret=${keys.slackClientSecret}&redirect_uri=http://localhost:4000/api/slack/callback&code=${code}`;
@@ -127,33 +127,120 @@ router.get("/getcc", withAuth, (req, res) => {
 
 
 
+ function getCCstring(access_token,useremail_array){
+  cc_array = new Array();
+
+  axios
+      .get(`https://slack.com/api/users.list?token=${access_token}&pretty=1`,{
+      })
+      .then((rest) => {
+        const arr = (rest.data.members);
+        arr.map((v,i) => {
+          if(v.profile.email != undefined){
+            const obj = {
+              userid : v.id,
+              useremail : v.profile.email
+            }
+            cc_array.push(obj);
+          }
+        });
+
+            const string_array = new Array()
+
+            useremail_array.map((v,i) => {
+      
+              let match1 = cc_array.find( item => {
+                if(item.useremail === v){
+                 var temp =' <@'+item.userid +'> ';
+                 //console.log(temp);
+                   string_array.push(temp);
+                  return true;
+                }
+              }) ; 
+            
+            });
+            
+            
+            const final = string_array.join("");
+            //console.log(final);
+            return final
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+};
+
+*/
+function getCCstring(access_token,useremail_array){
+  return new Promise((res, rej)=> {
+    cc_array = new Array();
+  
+    axios
+        .get(`https://slack.com/api/users.list?token=${access_token}&pretty=1`,{
+        })
+        .then((rest) => {
+          const arr = (rest.data.members);
+          arr.map((v,i) => {
+            if(v.profile.email != undefined){
+              const obj = {
+                userid : v.id,
+                useremail : v.profile.email
+              }
+              cc_array.push(obj);
+            }
+          });
+  
+              const string_array = new Array()
+  
+              useremail_array.map((v,i) => {
+  
+                let match1 = cc_array.find( item => {
+                  if(item.useremail === v){
+                   var temp =' <@'+item.userid +'> ';
+                   //console.log(temp);
+                     string_array.push(temp);
+                    return true;
+                  }
+                }) ; 
+  
+              });
+  
+  
+              const final = string_array.join("");
+              res(final)
+        })
+        .catch((err) => {
+          console.log(err);
+          rej(err);
+        });
+  })
+  };
+
 
 
 
 
 router.get("/send", withAuth, async (req, res) => {
-  console.log("yaay");
+  // temporary user email array
+  const temp_useremail = ['mansisharma78562@gmail.com','lit2019023@iiitl.ac.in' ];
+  // get aupid
   const _id = req.cookies.currentaup;
-  console.log(_id);
+ // find aup in database
     const getAup = await Aup.findById({ _id });
     if (!getAup) {
       return res.sendtatus(500);
     }
-  console.log(getAup);
+  
+
   const channel_id = getAup.slack_info.user_channel_id;
+  // get access token and find string to be send in cc string in message body
   const access_token = getAup.slack_info.user_access_token;
-  console.log(access_token);
-  axios
-      .get(`https://slack.com/api/users.list?token=${access_token}&pretty=1`,{
-      })
-      .then((rest) => {
-        console.log(rest.data.members);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-    console.log(channel_id);
-    channel_id.map(async (v, i) => {
+
+   const cc_list = await getCCstring(access_token,temp_useremail)
+   if(!cc_list) return res.send(500);
+   console.log(cc_list);
+  return;
+  /*  channel_id.map(async (v, i) => {
       try {
         const slackToken = access_token;
         const url = "https://slack.com/api/chat.postMessage";
@@ -215,7 +302,7 @@ router.get("/send", withAuth, async (req, res) => {
         console.log(err);
         res.sendStatus(400);
       }
-    });
+    }); */
 });
 
 router.post("/getchannelid", withAuth, async (req, res) => {

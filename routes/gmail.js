@@ -224,6 +224,6 @@ async function listAllTopics() {
   });
 }
 
-listAllTopics().catch(console.error);
+//listAllTopics().catch(console.error);
 
 module.exports = router;

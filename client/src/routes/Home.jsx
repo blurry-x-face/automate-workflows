@@ -32,7 +32,6 @@ function Comp(props) {
         setLoading(false);
       });
   }, []);
-
   const createAUP = () => {
     axios({
       method: "post",

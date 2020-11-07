@@ -29,11 +29,23 @@ router.get("/get/:id", withAuth, async (req, res) => {
 });
 
 router.get("/currentaup/:id", withAuth, async (req, res) => {
-  console.log("INN");
+  //console.log("INN");
   const id = req.params.id;
   try {
     const aup = await AUP.findById(id);
     res.cookie("currentaup", id).send(id);
+  } catch (error) {
+    res.cookie("currentaup", "").send(500);
+  }
+});
+
+router.get("/list", withAuth, async (req, res) => {
+  //console.log("INN");
+  const { email } = req;
+  try {
+    const aup = await AUP.find({ createdBy: email });
+    console.log(aup);
+    res.send(aup);
   } catch (error) {
     res.cookie("currentaup", "").send(500);
   }

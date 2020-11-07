@@ -5,6 +5,7 @@ import axios from "axios";
 import Aup from "./routes/Aup";
 import { Context } from "./Store";
 import Layout from "./components/Layout";
+import Workflows from "./routes/Workflows";
 
 import "antd/dist/antd.css"; // or 'antd/dist/antd.less'
 
@@ -40,6 +41,7 @@ export default function App() {
       <Switch>
         <Route path="/" exact component={Home} />
         <Route path="/aup/:id" exact component={Aup} />
+        <Route path="/workflows" exact component={Workflows} />
       </Switch>
     </Layout>
   );

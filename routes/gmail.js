@@ -5,7 +5,8 @@ const User = require("../models/user");
 const axios = require("axios");
 const SCOPES = ["https://mail.google.com/"];
 const keys = require("../config/keys");
-
+const Aup = require("../models/aup");
+const Enum = require("enum");
 const {
   client_secret,
   client_id,
@@ -25,31 +26,36 @@ router.get("/", (req, res) => {
   });
   res.redirect(authUrl);
 });
-router.get("/api/google/callback", withAuth, (req, resp) => {
+router.get("/callback", withAuth, async (req, resp) => {
   // const code = req.url.split("code")[1].split("&")[0].substr(1);
   const email = req.email;
   const { code } = req.query;
 
-  oAuth2Client.getToken(code, (err, token) => {
+  oAuth2Client.getToken(code, async (err, token) => {
     try {
       if (err) {
         console.error("Error retrieving access token");
         return resp.send({ message: "nahi ho paya" });
       }
-      // Store the token to disk for later program executions
-      User.findOne({ email }, async function (err, user) {
-        user.gmailToken = token;
-        console.log(token);
-        console.log(user);
-        await user.save();
-        oAuth2Client.setCredentials(token);
-        resp.cookie("token", token).send(`
-              <html>
-                <body>
-                  <button onclick="window.close()"> Service Authenticated close window </button>
-                </body>
-              </html>
-              `);
+      const _id = req.cookies.currentaup;
+      const getAup = await Aup.findById({ _id });
+      if (!getAup) {
+        return res.status(500).send("Not valid id");
+      }
+      getAup.gmailToken = token;
+      oAuth2Client.setCredentials(token);
+      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+      gmail.users.getProfile({ userId: "me" }, async (err, res) => {
+        getAup.gmailID = res.data.emailAddress;
+        getAup.historyID = res.data.historyId;
+        await getAup.save();
+        resp.send(`
+        <html>
+        <body>
+        <button onclick="window.close()"> Service Authenticated close window </button>
+        </body>
+        </html>`);
+        console.log("G Auth Complete");
       });
     } catch (error) {
       console.log(error);
@@ -57,43 +63,75 @@ router.get("/api/google/callback", withAuth, (req, resp) => {
   });
 });
 
-router.get(
-  "/gmail/list",
+router.post(
+  "/gmail/watch",
   withAuth,
-  (req, resp) => {
+  async (req, resp) => {
     const { email } = req;
-    User.findOne({ email }, async function (err, user) {
-      const token = user.gmailToken;
-      if (!token || err) resp.send("Auth error");
+    const { watch_param } = req.body;
+    const _id = req.cookies.currentaup;
+    const getAup = await Aup.findById({ _id });
+    if (!getAup) {
+      return res.status(500).send("Not valid id");
+    }
 
-      oAuth2Client.setCredentials(token);
-      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
-      gmail.users.getProfile({ userId: "me" }, (err, res) => {
-        if (err) {
-          return resp.send("The API returned an error: " + err);
-        }
-        resp.send(res.data.emailAddress);
-      });
-      gmail.users.watch(
-        {
-          userId: "me",
-          resource: {
-            topicName: keys.topicName,
-          },
+    const token = getAup.gmailToken;
+    oAuth2Client.setCredentials(token);
+    getAup.gmail_trigger_content = watch_param;
+
+    const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+    // gmail.users.getProfile({ userId: "me" }, (err, res) => {
+    //   if (err) {
+    //     return resp.send("The API returned an error: " + err);
+    //   }
+    //   resp.send(res.data.emailAddress);
+    // });
+    let labelIds = [];
+    if (watch_param == "NEW_MESSAGES") labelIds = ["UNREAD"];
+    else if (watch_param == "STAR") labelIds = ["STARRED"];
+    else if (watch_param == "FROM_ONLY") labelIds = ["UNREAD"];
+    gmail.users.watch(
+      {
+        userId: "me",
+        resource: {
+          topicName: keys.topicName,
+          labelIds,
         },
-        function (err, response) {
-          if (err) {
-            console.log("setWatch", err);
-            return;
-          }
-          console.log(response);
+      },
+      async function (err, response) {
+        if (err) {
+          console.log("setWatch", err);
+          return;
         }
-      );
-    });
+        getAup.historyID = response.data.historyId;
+        await getAup.save();
+        // console.log(response);
+        resp.send(response);
+      }
+    );
   }
   // authUrl
 );
-
+router.post("/gmail/watch/stop", withAuth, async (req, res) => {
+  const _id = req.cookies.currentaup;
+  const getAup = await Aup.findById({ _id });
+  const token = getAup.gmailToken;
+  oAuth2Client.setCredentials(token);
+  const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+  gmail.users.stop(
+    {
+      userId: "me",
+    },
+    async function (err, response) {
+      if (err) {
+        console.log("stoppppppppppppp", err);
+        return;
+      }
+      await getAup.save();
+      res.send(response);
+    }
+  );
+});
 const { PubSub } = require("@google-cloud/pubsub");
 
 // Creates a client; cache this for further use
@@ -112,15 +150,42 @@ async function listAllTopics() {
   const subscription = subcriptions[0];
 
   // Receive callbacks for new messages on the subscription
-  subscription.on("message", (message) => {
+  subscription.on("message", async (message) => {
     console.log("Received message:", message.data.toString());
-    axios
-      .get("http://localhost:4000/api/slack/send")
-      .then((res) => {
-        console.log(res.status);
-      })
-      .catch((err) => console.error(err));
-    message.ack();
+    console.log(JSON.parse(message.data));
+    const gID = JSON.parse(message.data).emailAddress;
+    const workflows = await Aup.find({ gmailID: gID });
+    workflows.forEach(async (workflow) => {
+      // workflow.forEach(async ())
+      oAuth2Client.setCredentials(workflow.gmailToken);
+      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+      gmail.users.history.list(
+        {
+          userId: "me",
+          historyTypes: new Enum(["LABEL_ADDED"]),
+          labelId: "STARRED",
+          startHistoryId: workflow.historyID,
+        },
+        async (err, response) => {
+          if (err) console.log(err);
+          console.log(response.data.history.length, response.data.historyId);
+          response.data.history.map((hist) => {
+            gmail.users.messages.get(
+              { userId: "me", id: hist.messages[0].id },
+              (err, rep) => {
+                if (err) console.log(err);
+                const sub = rep.data.payload.headers[23]
+                console.log(sub, rep.data.payload.headers[18]);
+              }
+            );
+          });
+          workflow.historyID = response.data.historyId;
+          await workflow.save();
+          message.ack();
+        }
+      );
+      console.log(workflow._id, workflow.historyID);
+    });
   });
 
   subscription.on("error", (error) => {

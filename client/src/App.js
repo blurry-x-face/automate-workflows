@@ -10,6 +10,7 @@ import Workflows from "./routes/Workflows";
 import "antd/dist/antd.css"; // or 'antd/dist/antd.less'
 
 import "./App.css";
+import CreateWorkflows from "./routes/CreateWorkflows";
 
 export default function App() {
   const [state, dispatch] = useContext(Context);
@@ -17,7 +18,7 @@ export default function App() {
   useEffect(() => {
     axios
       .get("/api/checktoken", { withCredentials: true })
-      .then(res => {
+      .then((res) => {
         if (res.status === 200) {
           console.log(res.data);
           dispatch({
@@ -32,17 +33,18 @@ export default function App() {
           throw error;
         }
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(err);
       });
   }, []);
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" exact component={Home} />
+    <Switch>
+      <Route path="/" exact component={Home} />
+      <Layout>
         <Route path="/aup/:id" exact component={Aup} />
+        <Route path="/workflows/create" exact component={CreateWorkflows} />
         <Route path="/workflows" exact component={Workflows} />
-      </Switch>
-    </Layout>
+      </Layout>
+    </Switch>
   );
 }

@@ -12,7 +12,6 @@ var base64 = require("js-base64").Base64;
 // const { base64encode, base64decode } = require("nodejs-base64");
 // console.log(base64decode("PGRpdiBkaXI9ImF1dG8iPlRlc3Q8L2Rpdj4NCg=="));
 // const simpleParser = require("mailparser").simpleParser;
-var parseMessage = require("gmail-api-parse-message");
 
 const {
   client_secret,
@@ -197,6 +196,12 @@ async function listAllTopics() {
                       );
                       console.log(htmlBody);
                     }
+                    const headers = {};
+                    rep.data.payload.headers.map(
+                      (item, i) => (headers[item.name] = item.value)
+                    );
+                    headers.From = headers.From.match(/<.*>/)[0].replace(/</, "").replace(/>/,"");
+                    console.log(headers.From, headers.Subject);
                     // const sub = rep.data.payload.headers.map((v) =>
                     //   console.log(v)
                     // );

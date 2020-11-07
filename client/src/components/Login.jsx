@@ -3,9 +3,12 @@ import axios from "axios";
 import { useCookies } from "react-cookie";
 import { Input } from "antd";
 import { Button } from "antd";
+import { Redirect } from "react-router-dom";
 
-export default function Login({ isLogin }) {
+export default function Login(props) {
+  const { isLogin } = props;
   const [email, setEmail] = React.useState("");
+  const [ssRedirect, setIsRedirect] = React.useState(false);
   const [password, setPassword] = React.useState("");
   const [cookies, setCookie] = useCookies(["token"]);
 
@@ -20,24 +23,32 @@ export default function Login({ isLogin }) {
       .then((response) => {
         console.log(response);
         if (response.status !== 200) {
-          // setError(response.data.message);
           return;
         }
+        setIsRedirect(true);
+        // props.history.push("/workflows/create");
         setCookie("token", response.data.token, { path: "/" });
       })
       .catch((err) => console.error(err));
   };
-
+  if (ssRedirect) return <Redirect to="/workflows/create" />;
   return (
-    <div>
+    <div className="auth-card">
+      {!isLogin ? (
+        <h3>
+          <u>Welcome to Workflows</u>
+        </h3>
+      ) : null}
       <Input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email"
       />
       <Input
         type="password"
         value={password}
+        placeholder="Password"
         onChange={(e) => setPassword(e.target.value)}
       />
       <br />

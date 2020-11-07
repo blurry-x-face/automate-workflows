@@ -1,12 +1,11 @@
 const router = require("express").Router();
 const withAuth = require("../middleware/auth");
-const User = require("../models/user");
+const Aup = require("../models/aup");
 var rp = require("request-promise");
 var request = require("request");
 const axios = require("axios");
 const keys = require("../config/keys");
-
-router.get("/:id", withAuth, (req, res) => {
+router.get("/", withAuth, (req, res) => {
   // Check if we have previously stored a token.
   const authUrl = keys.slackAuthURI;
   res.redirect(authUrl);
@@ -14,7 +13,8 @@ router.get("/:id", withAuth, (req, res) => {
 
 router.get("/callback", withAuth, (req, res) => {
   const { code } = req.query;
-  const url = `https://slack.com/api/oauth.v2.access?client_id=${keys.slackClientID}&client_secret=${keys.slackClientSecret}&redirect_uri=http://localhost:4000/slack/callback&code=${code}`;
+  console.log(code);
+  const url = `https://slack.com/api/oauth.v2.access?client_id=${keys.slackClientID}&client_secret=${keys.slackClientSecret}&redirect_uri=http://localhost:4000/api/slack/callback&code=${code}`;
   var options = {
     method: "GET",
     uri: url,
@@ -22,43 +22,25 @@ router.get("/callback", withAuth, (req, res) => {
   };
 
   rp(options)
-    .then(function (body) {
+    .then(async function (body) {
       //console.log(body);
       const userid = body.authed_user.id;
       const user_access_token = body.authed_user.access_token;
       const user_workspace_id = body.team.id;
-      console.log("cool");
-      console.log(req.email);
-      const curr_aup_id = req.cookies.currentaup;
-      User.findOne({ email: req.email }, async function (err, user) {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({
-            error: "Internal error please try again",
-          });
-        } else if (!user) {
-          return res.send("Please auth gmail first");
-        } else {
-          try {
-            const getuser = await User.findOne({ email: req.email });
-            if (!getuser) {
-              return res.status(400).send("some issue");
-            }
-            getuser.socket_info.push({
-              userid,
-              user_access_token,
-              user_workspace_id,
-            });
-            await getuser.save();
-            console.log(getuser);
-
-            res.json("yaay");
-          } catch (err) {
-            console.log(err);
-            res.send("trrrr");
-          }
-        }
-      });
+      const _id = req.cookies.currentaup;
+      console.log(_id);
+      const getAup = await Aup.findById({ _id });
+      if (!getAup) {
+        return res.status(500).send("Not valid id");
+      }
+      getAup.slack_info.userid = userid;
+      getAup.slack_info.user_access_token = user_access_token; // dekho scene yee h ki _id sahi h getAup par dabase se model bhi aa ja raha
+      // 36 se 41 ki line ka code nai chal raha h vo chalana h optional tha toh ya toh uss waqt jab bana rahe obj dummy value daal dei
+      getAup.slack_info.user_workspace_id = user_workspace_id;
+      console.log(getAup);
+      await getAup.save();
+      console.log(getAup);
+      res.status(200).send("yipes");
     })
     .catch(function (err) {
       console.log(err);
@@ -67,12 +49,20 @@ router.get("/callback", withAuth, (req, res) => {
     });
 });
 
-router.get("/getChannelList", async function (req, res) {
+router.get("/getChannelList", withAuth,async function (req, res) {
   // Working code for getting channel list
+  console.log("yaayy");
+  const _id = req.cookies.currentaup;
+  console.log(_id);
+  const getAup = await Aup.findById({ _id });
+  if (!getAup) {
+    return res.send(500);
+  }
+  const token = getAup.slack_info.user_access_token;
   var options = {
     headers: {
       "content-type": "application/json",
-      Authorization: `Bearer xoxp-1433850641255-1461220488801-1498346307424-a9ff0d87fe67b729c730fa146d6ba110`,
+      Authorization: `Bearer ${token}`,
     },
     uri: "https://slack.com/api/conversations.list",
     method: "GET",
@@ -85,6 +75,7 @@ router.get("/getChannelList", async function (req, res) {
     if (!error && response.statusCode == 200) {
       //  res.status(200);
       console.log(response.body);
+      res.send(response.body);
     }
   });
 });
@@ -140,9 +131,9 @@ router.get("/send", async (req, res) => {
   console.log("Done", resp.data);
 });
 
-router.get("/callback/:id", (req, res) => {
+/*router.get("/callback/:id", (req, res) => {
   console.log(req.params);
   res.send("ok");
 });
-
+*/
 module.exports = router;

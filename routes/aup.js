@@ -29,7 +29,7 @@ router.get("/get/:id", withAuth, async (req, res) => {
 });
 
 router.get("/currentaup/:id", withAuth, async (req, res) => {
-  console.log("INN");
+  //console.log("INN");
   const id = req.params.id;
   try {
     const aup = await AUP.findById(id);

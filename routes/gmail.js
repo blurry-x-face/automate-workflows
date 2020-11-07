@@ -12,7 +12,6 @@ var base64 = require("js-base64").Base64;
 // const { base64encode, base64decode } = require("nodejs-base64");
 // console.log(base64decode("PGRpdiBkaXI9ImF1dG8iPlRlc3Q8L2Rpdj4NCg=="));
 // const simpleParser = require("mailparser").simpleParser;
-var parseMessage = require("gmail-api-parse-message");
 
 const {
   client_secret,
@@ -219,6 +218,6 @@ async function listAllTopics() {
   });
 }
 
-listAllTopics().catch(console.error);
+//listAllTopics().catch(console.error);
 
 module.exports = router;

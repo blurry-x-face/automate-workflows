@@ -7,6 +7,13 @@ const SCOPES = ["https://mail.google.com/"];
 const keys = require("../config/keys");
 const Aup = require("../models/aup");
 const Enum = require("enum");
+var base64 = require("js-base64").Base64;
+
+// const { base64encode, base64decode } = require("nodejs-base64");
+// console.log(base64decode("PGRpdiBkaXI9ImF1dG8iPlRlc3Q8L2Rpdj4NCg=="));
+// const simpleParser = require("mailparser").simpleParser;
+var parseMessage = require("gmail-api-parse-message");
+
 const {
   client_secret,
   client_id,
@@ -151,41 +158,60 @@ async function listAllTopics() {
 
   // Receive callbacks for new messages on the subscription
   subscription.on("message", async (message) => {
-    console.log("Received message:", message.data.toString());
-    console.log(JSON.parse(message.data));
-    const gID = JSON.parse(message.data).emailAddress;
-    const workflows = await Aup.find({ gmailID: gID });
-    workflows.forEach(async (workflow) => {
-      // workflow.forEach(async ())
-      oAuth2Client.setCredentials(workflow.gmailToken);
-      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
-      gmail.users.history.list(
-        {
-          userId: "me",
-          historyTypes: new Enum(["LABEL_ADDED"]),
-          labelId: "STARRED",
-          startHistoryId: workflow.historyID,
-        },
-        async (err, response) => {
-          if (err) console.log(err);
-          console.log(response.data.history.length, response.data.historyId);
-          response.data.history.map((hist) => {
-            gmail.users.messages.get(
-              { userId: "me", id: hist.messages[0].id },
-              (err, rep) => {
-                if (err) console.log(err);
-                const sub = rep.data.payload.headers[23]
-                console.log(sub, rep.data.payload.headers[18]);
-              }
-            );
-          });
-          workflow.historyID = response.data.historyId;
-          await workflow.save();
-          message.ack();
-        }
-      );
-      console.log(workflow._id, workflow.historyID);
-    });
+    try {
+      message.ack();
+      console.log("Received message:", message.data.toString());
+      console.log(JSON.parse(message.data));
+      const gID = JSON.parse(message.data).emailAddress;
+      const workflows = await Aup.find({ gmailID: gID });
+      workflows.forEach(async (workflow) => {
+        // workflow.forEach(async ())
+        oAuth2Client.setCredentials(workflow.gmailToken);
+        const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+        gmail.users.history.list(
+          {
+            userId: "me",
+            historyTypes: new Enum(["LABEL_ADDED"]),
+            labelId: "STARRED",
+            startHistoryId: workflow.historyID,
+          },
+          async (err, response) => {
+            if (err || response.status !== 200) {
+              console.log(err);
+              return;
+            }
+            // console.log(response);
+            // console.log( response.data.historyId);
+            workflow.historyID = response.data.historyId;
+            await workflow.save();
+            if (response.data.history)
+              response.data.history.map((hist) => {
+                gmail.users.messages.get(
+                  { userId: "me", id: hist.messages[0].id },
+                  (err, rep) => {
+                    if (err) console.log(err);
+                    const body = rep.data.payload.parts[0].body.data;
+                    if (body) {
+                      var htmlBody = base64.decode(
+                        body.replace(/-/g, "+").replace(/_/g, "/")
+                      );
+                      console.log(htmlBody);
+                    }
+                    // const sub = rep.data.payload.headers.map((v) =>
+                    //   console.log(v)
+                    // );
+                    // console.log(rep.data);
+                    // console.log(base64decode(rep.data.payload.body.data));
+                  }
+                );
+              });
+          }
+        );
+        console.log(workflow._id, workflow.historyID);
+      });
+    } catch (error) {
+      console.log(error.message);
+    }
   });
 
   subscription.on("error", (error) => {

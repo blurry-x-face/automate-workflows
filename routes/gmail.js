@@ -189,42 +189,53 @@ async function listAllTopics() {
                   { userId: "me", id: hist.messages[0].id },
                   (err, rep) => {
                     if (err) console.log(err);
-                    const body = rep.data.payload.parts[0].body.data;
-                    var htmlBody = "";
-                    if (body) {
-                      htmlBody = base64.decode(
-                        body.replace(/-/g, "+").replace(/_/g, "/")
-                      );
-              //        console.log(htmlBody);
-                    }
-                    const headers = {};
-                    rep.data.payload.headers.map(
-                      (item, i) => (headers[item.name] = item.value)
-                    );
-                    headers.From = headers.From.match(/<.*>/)[0]
-                      .replace(/</, "")
-                      .replace(/>/, "");
-                    let cc = [];
-                 //   console.log(headers.Cc);
-                    if (headers.Cc)
-                      cc = headers.Cc.match(
-                        /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
-                      );
-                    axios
-                      .post("http://localhost:4000/api/slack/send", {
-                        aupId: workflow._id,
-                        From: headers.From,
-                        subject: headers.Subject,
-                        cc,
-                        msgBody: htmlBody,
-                      })
-                      .then((res) => {
-                        if (res.status == 200)
-                          console.log("message sent succesfully");
-                      })
-                      .catch((err) => {
-                        // console.log(err);
-                      });
+                    const body = rep.data.payload.parts[0].body.data; // rep.threadId
+                  //  console.log(rep);
+                     var parent_internalDate = "";
+                     const internalDate = rep.data.internalDate;
+                      gmail.users.threads.get({ userId: "me", id: rep.data.threadId }, (err,res) => {
+                     //     console.log("ooo");
+                          if(res.data.messages.length > 1){
+                                 parent_internalDate = (res.data.messages[0].internalDate);
+                          };          
+                           console.log(parent_internalDate);
+                          var htmlBody = "";
+                          if (body) {
+                            htmlBody = base64.decode(
+                              body.replace(/-/g, "+").replace(/_/g, "/")
+                            );
+                    //        console.log(htmlBody);
+                          }
+                          const headers = {};
+                          rep.data.payload.headers.map(
+                            (item, i) => (headers[item.name] = item.value)
+                          );
+                          headers.From = headers.From.match(/<.*>/)[0]
+                            .replace(/</, "")
+                            .replace(/>/, "");
+                          let cc = [];
+                       //   console.log(headers.Cc);
+                          if (headers.Cc)
+                            cc = headers.Cc.match(
+                              /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
+                            );
+                          axios
+                            .post("http://localhost:4000/api/slack/send", {
+                              internalDate,
+                              parent_internalDate,
+                              aupId: workflow._id,
+                              From: headers.From,
+                              subject: headers.Subject,
+                              cc,
+                              msgBody: htmlBody,
+                            }) .then((res) => {
+                              if (res.status == 200)
+                                console.log("message sent succesfully");
+                            })
+                            .catch((err) => {
+                              // console.log(err);
+                            });
+                      }) 
                   }
                 );
               });

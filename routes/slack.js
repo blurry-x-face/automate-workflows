@@ -128,19 +128,145 @@ function getCCstring(access_token,useremail_array){
   })
   };
 
-function getParentTs(access_token,channelid){
-axios.get()
-}
+function getParentTs(access_token,channelid,parent_internalDate){
+   console.log("step3");
+  return new Promise((res, rej)=> {
+    axios
+        .get(`https://slack.com/api/conversations.history?token=${access_token}&channel=${channelid}&pretty=1`,{
+        })
+        .then((rest) => {
+        console.log("step4");
+        const arr = (rest.data.messages);
 
+        arr.map((v,i)=> {
+      // console.log(v);
+         if(v.blocks != undefined){
+         //  console.log(v.blocks);
+           if(v.blocks.length > 1){
+           // console.log(v.blocks[1]);
+             if(v.blocks[1].type == "section"){
+             // console.log(v.blocks[1].type);
+                 if(v.blocks[1].text != undefined){
+                //  console.log(v.blocks[1].type.text);
+                   if(v.blocks[1].text.text != undefined){
+                         if(v.blocks[1].text.text.length == 26){
+                           var temp = "";
+                           for(var i = 12;i<25;i++)temp = temp + v.blocks[1].text.text[i];
+                           //console.log(temp);
+                           //console.log(parent_internalDate);
+                           if(temp == parent_internalDate)res(v.ts);
+                         }
+                   }
+                 }
+             }
+           }
+         }
+         res("...")
+         // console.log(v.blocks[0].elements); // v - mesgs v.blocks-array-body  blocks[1].type == section blocks[1].text.text == 160 47 89 37 2000
+        })
+        })
+        .catch((err) => {
+          rej("...");
+        });
+  })
+};
+
+async function sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,access_token,parent_internalDate,cc_array){
+ // console.log("step2");
+  try{
+    const vr = await getParentTs(access_token,channel_id,parent_internalDate);
+    if(vr != "..."){
+      console.log("vr : "+vr);
+      const cc_list = await getCCstring(access_token,cc_array);
+
+      channel_id.map(async (v, i) => {
+       try {
+       //  const slackToken = access_token;
+         const url = "https://slack.com/api/chat.postMessage";
+         
+         const resp = await axios.post(
+           url,
+           {
+             channel: v,
+             thread_ts: vr,
+             blocks: [
+               {
+                 "type": "section",
+                 "text": {
+                   "type": "mrkdwn",
+                   "text": `*${fromy} has sent a mail.*\n*Subject* : ${subject} \n *Sent at*: 11:07 P.M.`
+                 }
+               },
+               {
+                 "type": "section",
+                 "text": {
+                   "type": "mrkdwn",
+                   "text": ` *Sent at*: ${internalDate}.`
+                 }
+               },
+               {
+                 "type": "divider"
+               },
+               {
+                 "type": "context",
+                 "elements": [
+                   {
+                     "type": "mrkdwn",
+                     "text": `*CC:* ${cc_list}`
+                   }
+                 ]
+               },
+               {
+                 "type": "divider"
+               },
+               {
+                 "type": "context",
+                 "elements": [
+                   {
+                     "type": "mrkdwn",
+                     "text": `${msgBody}`
+                   }
+                 ]
+               }
+             /*  {
+                 "type": "divider"
+               },
+             {
+                 "type": "image",
+                 "title": {
+                   "type": "plain_text",
+                   "text": "Attachment Name",
+                   "emoji": true
+                 },
+                 "image_url": "https://assets3.thrillist.com/v1/image/1682388/size/tl-horizontal_main.jpg",
+                 "alt_text": "marg"
+           } */
+             ]
+           },
+           { headers: { authorization: `Bearer ${access_token}` } }
+         );
+        // console.log("Done", resp.data);
+       } catch (err) {
+         console.log(err);
+         res.sendStatus(400);
+       }
+     });
+    }
+  }catch(err)  {
+       console.log(err);
+  }
+};
 
 
 router.post("/send",  async (req, res) => {
   // temporary user email array
+  //internalDate,   parent_internalDate,
  // const temp_useremail = ['mansisharma78562@gmail.com','lit2019023@iiitl.ac.in' ];
   // get aupid
-  console.log("yaay start")
+//  console.log("yaay start")
+  
   const _id = (req.body.aupId);
- 
+  const internalDate = req.body.internalDate;
   const fromy = req.body.From;
   const subject = req.body.subject;
   const msgBody = req.body.msgBody;
@@ -157,7 +283,14 @@ router.post("/send",  async (req, res) => {
   // get access token and find string to be send in cc string in message body
   const access_token = getAup.slack_info.user_access_token;
   //const cc_list = "....";
+
+  if(req.body.parent_internalDate != ""){
+    console.log("step1");
+    return sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,access_token,req.body.parent_internalDate,req.body.cc);
+  }
+
   const cc_list = await getCCstring(access_token,req.body.cc);
+
      channel_id.map(async (v, i) => {
       try {
       //  const slackToken = access_token;
@@ -172,6 +305,13 @@ router.post("/send",  async (req, res) => {
                 "text": {
                   "type": "mrkdwn",
                   "text": `*${fromy} has sent a mail.*\n*Subject* : ${subject} \n *Sent at*: 11:07 P.M.`
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ` *Sent at*: ${internalDate}.`
                 }
               },
               {
@@ -215,7 +355,7 @@ router.post("/send",  async (req, res) => {
           },
           { headers: { authorization: `Bearer ${access_token}` } }
         );
-        console.log("Done", resp.data);
+       // console.log("Done", resp.data);
       } catch (err) {
         console.log(err);
         res.sendStatus(400);
@@ -224,20 +364,23 @@ router.post("/send",  async (req, res) => {
 });
 
 router.post("/getchannelid", withAuth, async (req, res) => {
-  //const channel_id = req.body._id;
+  const channel_id = req.body._id;
+ // console.log(channel_id);
   //console.log("yaay");
-  //console.log(channel_id);
   try {
-    const _id = req.cookies.currentaup;
-    const getAup = await Aup.findById({ _id });
+    const id = req.cookies.currentaup;
+   // console.log(id);
+    const getAup = await Aup.findById({ _id  : id});
     if (!getAup) {
       return res.send(500);
     }
+    console.log(getAup);
     getAup.slack_info.user_channel_id = channel_id;
     await getAup.save();
-    res.send(200);
+    console.log(getAup);
+    return res.status(200);
   } catch (err) {
-    res.send(500);
+    return res.status(500);
   }
 });
 

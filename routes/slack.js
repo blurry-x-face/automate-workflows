@@ -304,7 +304,7 @@ router.post("/send",  async (req, res) => {
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": `*${fromy} has sent a mail.*\n*Subject* : ${subject} \n *Sent at*: 11:07 P.M.`
+                  "text": `*${fromy} has sent a mail.*\n*Subject* : ${subject} \n`
                 }
               },
               {

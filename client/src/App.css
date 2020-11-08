@@ -113,3 +113,20 @@
 .workflow-list a:hover {
   color: #1890ff;
 }
+.image-element-1 {
+  height: 20vh;
+  position: absolute;
+  left: -3vw;
+  transform: rotate(-35deg);
+  top: 58%;
+  z-index: -99;
+}
+
+.image-element-2 {
+  height: 20vh;
+  position: absolute;
+  right: -3vw;
+  transform: rotate(-135deg);
+  top: 18%;
+  z-index: -99;
+}

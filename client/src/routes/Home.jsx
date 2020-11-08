@@ -22,6 +22,7 @@ function Comp(props) {
           setLoading(false);
           setAuth(true);
           setUser({ email: res.data });
+          props.history.push("/workflows/create")
         } else {
           const error = new Error(res.error);
           throw error;
@@ -33,9 +34,16 @@ function Comp(props) {
       });
   }, []);
 
-
   return (
     <>
+      <img
+        src="https://rishabhshukla.netlify.app/static/media/wave.f230a8cb.svg"
+        className="image-element-1"
+      />
+      <img
+        src="https://rishabhshukla.netlify.app/static/media/wave.f230a8cb.svg"
+        className="image-element-2"
+      />
       {auth ? (
         "DONE!"
       ) : (

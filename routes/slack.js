@@ -136,33 +136,26 @@ function getParentTs(access_token,channelid,parent_internalDate){
         .then((rest) => {
         console.log("step4");
         const arr = (rest.data.messages);
+       // console.log(arr);
+       var se = "..."
+        const n = arr.length ;
+        for(var i = n-1 ; i>=0 ;i--){
+          if(arr[i].blocks != undefined){
+            if(arr[i].blocks.length > 2){
+              if(arr[i].blocks[2].type == "section"){
+                             console.log(parent_internalDate);
+                             console.log(arr[i].blocks[2].text.text);
+                             if(parent_internalDate == arr[i].blocks[2].text.text) se = parent_internalDate;
+                }
+              }
+            }
+          }
+        
+     //   console.log(n);
 
-        arr.map((v,i)=> {
-      // console.log(v);
-         if(v.blocks != undefined){
-         //  console.log(v.blocks);
-           if(v.blocks.length > 1){
-           // console.log(v.blocks[1]);
-             if(v.blocks[1].type == "section"){
-             // console.log(v.blocks[1].type);
-                 if(v.blocks[1].text != undefined){
-                //  console.log(v.blocks[1].type.text);
-                   if(v.blocks[1].text.text != undefined){
-                         if(v.blocks[1].text.text.length == 26){
-                           var temp = "";
-                           for(var i = 12;i<25;i++)temp = temp + v.blocks[1].text.text[i];
-                           //console.log(temp);
-                           //console.log(parent_internalDate);
-                           if(temp == parent_internalDate)res(v.ts);
-                         }
-                   }
-                 }
-             }
-           }
-         }
-         res("...")
+      
+         res(se);
          // console.log(v.blocks[0].elements); // v - mesgs v.blocks-array-body  blocks[1].type == section blocks[1].text.text == 160 47 89 37 2000
-        })
         })
         .catch((err) => {
           rej("...");
@@ -171,83 +164,85 @@ function getParentTs(access_token,channelid,parent_internalDate){
 };
 
 async function sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,access_token,parent_internalDate,cc_array,threadId){
- // console.log("step2");
+ console.log("step2");
   try{
     const vr = await getParentTs(access_token,channel_id,parent_internalDate);
     if(vr != "..."){
-      console.log("vr : "+vr);
+     // console.log("vr : "+vr);
       const cc_list = await getCCstring(access_token,cc_array);
 
       channel_id.map(async (v, i) => {
        try {
-       //  const slackToken = access_token;
-         const url = "https://slack.com/api/chat.postMessage";
-         
-         const resp = await axios.post(
-           url,
-           {
-             channel: v,
-             thread_ts: vr,
-             blocks: [
+            //  const slackToken = access_token;
+        const url = "https://slack.com/api/chat.postMessage";
+        const resp = await axios.post(
+          url,
+          {
+            "channel": v,
+            "thread_ts" : vr,
+             "blocks": [
               {
                 "type": "section",
-                "text": `${threadId}`
+                "text": {
+                  "type": "mrkdwn",
+                  "text": `${threadId}`
+                }
               },
-               {
-                 "type": "section",
-                 "text": {
-                   "type": "mrkdwn",
-                   "text": `*${fromy} has sent a mail.*\n*Subject* : ${subject} \n *Sent at*: 11:07 P.M.`
-                 }
-               },
-               {
-                 "type": "section",
-                 "text": {
-                   "type": "mrkdwn",
-                   "text": ` *Sent at*: ${internalDate}.`
-                 }
-               },
-               {
-                 "type": "divider"
-               },
-               {
-                 "type": "context",
-                 "elements": [
-                   {
-                     "type": "mrkdwn",
-                     "text": `*CC:* ${cc_list}`
-                   }
-                 ]
-               },
-               {
-                 "type": "divider"
-               },
-               {
-                 "type": "context",
-                 "elements": [
-                   {
-                     "type": "mrkdwn",
-                     "text": `${msgBody}`
-                   }
-                 ]
-               }
-             /*  {
-                 "type": "divider"
-               },
-             {
-                 "type": "image",
-                 "title": {
-                   "type": "plain_text",
-                   "text": "Attachment Name",
-                   "emoji": true
-                 },
-                 "image_url": "https://assets3.thrillist.com/v1/image/1682388/size/tl-horizontal_main.jpg",
-                 "alt_text": "marg"
-           } */
-             ]
-           },
-           { headers: { authorization: `Bearer ${access_token}` } }
-         );
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": `*${fromy} has sent a mail.*\n*Subject* : ${subject} \n`
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": `${internalDate}`
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": `*CC:* ${cc_list}`
+                  }
+                ]
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": `${msgBody}`
+                  }
+                ]
+              }
+            /*  {
+                "type": "divider"
+              },
+            {
+                "type": "image",
+                "title": {
+                  "type": "plain_text",
+                  "text": "Attachment Name",
+                  "emoji": true
+                },
+                "image_url": "https://assets3.thrillist.com/v1/image/1682388/size/tl-horizontal_main.jpg",
+                "alt_text": "marg"
+          } */
+            ]
+          },
+          { headers: { authorization: `Bearer ${access_token}` } }
+        );
         console.log("Done", resp.data);
        } catch (err) {
          console.log(err);
@@ -320,8 +315,8 @@ router.post("/send",  async (req, res) => {
               {
                 "type": "section",
                 "text": {
-                  // "type": "mrkdwn",
-                  "text": ` *Sent at*: ${internalDate}.`
+                  "type": "mrkdwn",
+                  "text": `${internalDate}`
                 }
               },
               {
@@ -430,7 +425,7 @@ router.post("/sendgmailemail",(req,res) => {
     text
   }).then((res) => {
     console.log("success");
-  }). catach ((err) => {
+  }).catch ((err) => {
     console.log(err);
   })
 });

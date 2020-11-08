@@ -320,7 +320,7 @@ async function listAllTopics() {
                       (err, rep) => {
                         // if (hist.messages[0].historyId >= workflow.historyID) {
                         if (err) console.log(err);
-                        if (!rep.data.labelIds.includes("UNREAD")) return;
+                        //  if (!rep.data.labelIds.includes("UNREAD")) return;
                         // console.log(rep.data.labelIds.includes("UNREAD"), index);
                         const body = rep.data.payload.parts[0].body.data; // rep.threadId
                         var parent_internalDate = "";
@@ -356,6 +356,7 @@ async function listAllTopics() {
                               );
                             axios
                               .post("http://localhost:4000/api/slack/send", {
+                                threadId : rep.data.threadId,
                                 internalDate,
                                 parent_internalDate,
                                 aupId: workflow._id,

@@ -127,7 +127,6 @@ function getCCstring(access_token,useremail_array){
         });
   })
   };
-
 function getParentTs(access_token,channelid,parent_internalDate){
    console.log("step3");
   return new Promise((res, rej)=> {
@@ -171,7 +170,7 @@ function getParentTs(access_token,channelid,parent_internalDate){
   })
 };
 
-async function sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,access_token,parent_internalDate,cc_array){
+async function sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,access_token,parent_internalDate,cc_array,threadId){
  // console.log("step2");
   try{
     const vr = await getParentTs(access_token,channel_id,parent_internalDate);
@@ -190,6 +189,10 @@ async function sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,
              channel: v,
              thread_ts: vr,
              blocks: [
+              {
+                "type": "section",
+                "text": `${threadId}`
+              },
                {
                  "type": "section",
                  "text": {
@@ -245,7 +248,7 @@ async function sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,
            },
            { headers: { authorization: `Bearer ${access_token}` } }
          );
-        // console.log("Done", resp.data);
+        console.log("Done", resp.data);
        } catch (err) {
          console.log(err);
          res.sendStatus(400);
@@ -263,14 +266,14 @@ router.post("/send",  async (req, res) => {
   //internalDate,   parent_internalDate,
  // const temp_useremail = ['mansisharma78562@gmail.com','lit2019023@iiitl.ac.in' ];
   // get aupid
-//  console.log("yaay start")
+ console.log("yaay start")
   
   const _id = (req.body.aupId);
   const internalDate = req.body.internalDate;
   const fromy = req.body.From;
   const subject = req.body.subject;
   const msgBody = req.body.msgBody;
-
+ const threadId = req.body.threadId
   //const _id = req.cookies.currentaup;
  // find aup in database
     const getAup = await Aup.findById({ _id });
@@ -286,11 +289,11 @@ router.post("/send",  async (req, res) => {
 
   if(req.body.parent_internalDate != ""){
     console.log("step1");
-    return sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,access_token,req.body.parent_internalDate,req.body.cc);
+    return sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,access_token,req.body.parent_internalDate,req.body.cc,threadId);
   }
 
   const cc_list = await getCCstring(access_token,req.body.cc);
-
+ console.log("idh")
      channel_id.map(async (v, i) => {
       try {
       //  const slackToken = access_token;
@@ -300,6 +303,13 @@ router.post("/send",  async (req, res) => {
           {
             channel: v,
             blocks: [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": `${threadId}`
+                }
+              },
               {
                 "type": "section",
                 "text": {
@@ -355,7 +365,7 @@ router.post("/send",  async (req, res) => {
           },
           { headers: { authorization: `Bearer ${access_token}` } }
         );
-       // console.log("Done", resp.data);
+        console.log("Done", resp.data);
       } catch (err) {
         console.log(err);
         res.sendStatus(400);
@@ -385,6 +395,44 @@ router.post("/getchannelid", withAuth, async (req, res) => {
 });
 
 
-
+router.post("/sendgmailemail",(req,res) => {
+  console.log("aa gaye idhar");
+  var str = (req.body.data.text);
+  console.log(req.body.data);
+  console.log(str);
+  var threadId = "" ;
+  var email_to = "";
+  var text = "";
+  var n = str.length;
+  console.log(n);
+  var j=0;count = 0;
+  console.log("hb");
+  while( j < n){
+  if(count <= 1 && str[j] == " "){
+    count = count +1;
+    j++;
+  }
+  if(count == 0){
+    threadId = threadId + str[j];
+  }else if(count == 1){
+    email_to = email_to + str[j];
+  }else{
+    text = text + str[j];
+  }
+  j++;
+  }
+  console.log(threadId);
+  console.log(email_to);
+  console.log(text);
+  axios.post(".api/google/gmail/send",{
+    threadId,
+    email_from : email_to,
+    text
+  }).then((res) => {
+    console.log("success");
+  }). catach ((err) => {
+    console.log(err);
+  })
+});
 
 module.exports = router;

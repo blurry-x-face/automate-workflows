@@ -143,8 +143,8 @@ function getParentTs(access_token,channelid,parent_internalDate){
           if(arr[i].blocks != undefined){
             if(arr[i].blocks.length > 2){
               if(arr[i].blocks[2].type == "section"){
-                             console.log(parent_internalDate);
-                             console.log(arr[i].blocks[2].text.text);
+                           //  console.log(parent_internalDate);
+                           //  console.log(arr[i].blocks[2].text.text);
                              if(parent_internalDate == arr[i].blocks[2].text.text) se = parent_internalDate;
                 }
               }
@@ -167,8 +167,8 @@ async function sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,
  console.log("step2");
   try{
     const vr = await getParentTs(access_token,channel_id,parent_internalDate);
-    if(vr != "..."){
-     // console.log("vr : "+vr);
+    if(vr == "...")return ;
+    console.log(vr);
       const cc_list = await getCCstring(access_token,cc_array);
 
       channel_id.map(async (v, i) => {
@@ -249,7 +249,7 @@ async function sendwithParent(_id,internalDate,fromy,subject,msgBody,channel_id,
          res.sendStatus(400);
        }
      });
-    }
+    
   }catch(err)  {
        console.log(err);
   }

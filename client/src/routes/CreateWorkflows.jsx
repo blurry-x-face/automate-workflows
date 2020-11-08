@@ -49,6 +49,9 @@ export default function CreateWorkflows(props) {
           Create Workflow
         </Button>
       </div>
+      <Title level={4} style={{ marginTop: "8vh" }}>
+        Available Integrations
+      </Title>
       <div className="app-card-container">
         <AppCard src={gmail} desc="Gmail" />
         <AppCard src={slack} desc="Slack" />

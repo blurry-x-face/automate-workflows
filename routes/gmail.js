@@ -3,7 +3,10 @@ const { google } = require("googleapis");
 const withAuth = require("../middleware/auth");
 const User = require("../models/user");
 const axios = require("axios");
-const SCOPES = ["https://mail.google.com/"];
+const SCOPES = [
+  "https://mail.google.com/",
+  "https://www.googleapis.com/auth/drive",
+];
 const keys = require("../config/keys");
 const Aup = require("../models/aup");
 const Enum = require("enum");
@@ -50,6 +53,7 @@ router.get("/callback", withAuth, async (req, resp) => {
       }
       getAup.gmailToken = token;
       oAuth2Client.setCredentials(token);
+      console.log(token);
       const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
       gmail.users.getProfile({ userId: "me" }, async (err, res) => {
         getAup.gmailID = res.data.emailAddress;
@@ -96,6 +100,7 @@ router.post(
     if (watch_param == "NEW_MESSAGES") labelIds = ["UNREAD"];
     else if (watch_param == "STAR") labelIds = ["STARRED"];
     else if (watch_param == "FROM_ONLY") labelIds = ["UNREAD"];
+    console.log(labelIds);
     gmail.users.watch(
       {
         userId: "me",
@@ -138,6 +143,45 @@ router.post("/gmail/watch/stop", withAuth, async (req, res) => {
     }
   );
 });
+
+// router.get("/drive/upload", async (req, res) => {
+//   // const { gmailToken } = req.body;
+//   const gmailToken = {
+//     access_token:
+//       "ya29.A0AfH6SMCgEPjbZEs0xm55cAB-U2MBcyBrA1Xndb2Z4hieqxpaGnbFL5RdBrwFsVISUz6ZqNqamMpzzNWLyHkkNiSMaxRx5pktGHmfjgT2g6_qqI-U6NCjp8XZvCafx0ZVHojpe8a5skm20DE1SPDBb7XpDHJtwKl6O2e9G7XGVfg",
+//     refresh_token:
+//       "1//0gmENeQltHvjXCgYIARAAGBASNwF-L9IrKkNa4ctEP4Uk7dxUpPZ58jW7JMkDU_wZy9P2LfeOAwUXYHY7vh82o1zWyM4vyn_U0ic",
+//     scope: "https://mail.google.com/ https://www.googleapis.com/auth/drive",
+//     token_type: "Bearer",
+//     expiry_date: 1604785838707,
+//   };
+//   // oAuth2Client.setCredentials(gmailToken);
+//   const drive = google.drive({ version: "v3", auth: gmailToken });
+//   var fileMetadata = {
+//     name: "Invoice xyz",
+//     mimeType: "application/pdf",
+//   };
+//   var media = {
+//     mimeType: "application/pdf",
+//     body: require("./data").data,
+//   };
+//   drive.files.create(
+//     {
+//       resource: fileMetadata,
+//       media: media,
+//       fields: "id",
+//     },
+//     function (err, file) {
+//       if (err) {
+//         // Handle error
+//         console.error(err);
+//       } else {
+//         console.log("File Id:", file.id);
+//       }
+//     }
+//   );
+// });
+
 const { PubSub } = require("@google-cloud/pubsub");
 
 // Creates a client; cache this for further use
@@ -160,76 +204,146 @@ async function listAllTopics() {
     try {
       message.ack();
       console.log("Received message:", message.data.toString());
-      console.log(JSON.parse(message.data));
+      // console.log(JSON.parse(message.data));
       const gID = JSON.parse(message.data).emailAddress;
       const workflows = await Aup.find({ gmailID: gID });
       workflows.forEach(async (workflow) => {
         // workflow.forEach(async ())
         oAuth2Client.setCredentials(workflow.gmailToken);
         const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
-        gmail.users.history.list(
-          {
-            userId: "me",
-            historyTypes: new Enum(["LABEL_ADDED"]),
-            labelId: "STARRED",
-            startHistoryId: workflow.historyID,
-          },
-          async (err, response) => {
-            if (err || response.status !== 200) {
-              console.log(err);
-              return;
-            }
-            // console.log(response);
-            // console.log( response.data.historyId);
-            workflow.historyID = response.data.historyId;
-            await workflow.save();
-            if (response.data.history)
-              response.data.history.map((hist) => {
-                gmail.users.messages.get(
-                  { userId: "me", id: hist.messages[0].id },
-                  (err, rep) => {
-                    if (err) console.log(err);
-                    const body = rep.data.payload.parts[0].body.data;
-                    var htmlBody = "";
-                    if (body) {
-                      htmlBody = base64.decode(
-                        body.replace(/-/g, "+").replace(/_/g, "/")
+        if (workflow.gmail_trigger_content == "STAR")
+          gmail.users.history.list(
+            {
+              userId: "me",
+              historyTypes: new Enum(["LABEL_ADDED"]),
+              labelId: "STARRED",
+              startHistoryId: workflow.historyID,
+            },
+            async (err, response) => {
+              if (err || response.status !== 200) {
+                console.log(err);
+                return;
+              }
+              // console.log(response);
+              // console.log( response.data.historyId);
+              workflow.historyID = response.data.historyId;
+              await workflow.save();
+              if (response.data.history)
+                // console.log(response.data.history.messages.id)
+                response.data.history.map((hist) => {
+                  gmail.users.messages.get(
+                    { userId: "me", id: hist.messages[0].id },
+                    (err, rep) => {
+                      if (err) console.log(err);
+                      console.log(hist.messages[0].id);
+                      const body = rep.data.payload.parts[0].body.data;
+                      var htmlBody = "";
+                      if (body) {
+                        htmlBody = base64.decode(
+                          body.replace(/-/g, "+").replace(/_/g, "/")
+                        );
+                        // console.log(htmlBody);
+                      }
+                      const headers = {};
+                      rep.data.payload.headers.map(
+                        (item, i) => (headers[item.name] = item.value)
                       );
-                      console.log(htmlBody);
+                      headers.From = headers.From.match(/<.*>/)[0]
+                        .replace(/</, "")
+                        .replace(/>/, "");
+                      let cc = [];
+                      // console.log(headers.Cc);
+                      if (headers.Cc)
+                        cc = headers.Cc.match(
+                          /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
+                        );
+                      axios
+                        .post("http://localhost:4000/api/slack/send", {
+                          aupId: workflow._id,
+                          From: headers.From,
+                          subject: headers.Subject,
+                          cc,
+                          msgBody: htmlBody,
+                        })
+                        .then((res) => {
+                          if (res.status == 200)
+                            console.log("message sent succesfully");
+                        })
+                        .catch((err) => {
+                          // console.log(err);
+                        });
                     }
-                    const headers = {};
-                    rep.data.payload.headers.map(
-                      (item, i) => (headers[item.name] = item.value)
-                    );
-                    headers.From = headers.From.match(/<.*>/)[0]
-                      .replace(/</, "")
-                      .replace(/>/, "");
-                    let cc = [];
-                    console.log(headers.Cc);
-                    if (headers.Cc)
-                      cc = headers.Cc.match(
-                        /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
+                  );
+                });
+            }
+          );
+        if (workflow.gmail_trigger_content == "NEW_MESSAGES")
+          gmail.users.history.list(
+            {
+              userId: "me",
+              historyTypes: new Enum(["MESSAGE_ADDED"]),
+              // labelId: "STARRED",
+              startHistoryId: workflow.historyID,
+            },
+            async (err, response) => {
+              if (err || response.status !== 200) {
+                console.log(err);
+                return;
+              }
+              // console.log(response);
+              // console.log( response.data.historyId);
+              workflow.historyID = response.data.historyId;
+              await workflow.save();
+              if (response.data.history)
+                // console.log(response.data.history.messages.id)
+                response.data.history.map((hist) => {
+                  gmail.users.messages.get(
+                    { userId: "me", id: hist.messages[0].id },
+                    (err, rep) => {
+                      if (err) console.log(err);
+                      console.log(hist.messages[0].id);
+                      const body = rep.data.payload.parts[0].body.data;
+                      var htmlBody = "";
+                      if (body) {
+                        htmlBody = base64.decode(
+                          body.replace(/-/g, "+").replace(/_/g, "/")
+                        );
+                        // console.log(htmlBody);
+                      }
+                      const headers = {};
+                      rep.data.payload.headers.map(
+                        (item, i) => (headers[item.name] = item.value)
                       );
-                    axios
-                      .post("http://localhost:4000/api/slack/send", {
-                        aupId: workflow._id,
-                        From: headers.From,
-                        subject: headers.Subject,
-                        cc,
-                        msgBody: htmlBody,
-                      })
-                      .then((res) => {
-                        if (res.status == 200)
-                          console.log("message sent succesfully");
-                      })
-                      .catch((err) => {
-                        // console.log(err);
-                      });
-                  }
-                );
-              });
-          }
-        );
+                      headers.From = headers.From.match(/<.*>/)[0]
+                        .replace(/</, "")
+                        .replace(/>/, "");
+                      let cc = [];
+                      // console.log(headers.Cc);
+                      if (headers.Cc)
+                        cc = headers.Cc.match(
+                          /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
+                        );
+                      axios
+                        .post("http://localhost:4000/api/slack/send", {
+                          aupId: workflow._id,
+                          From: headers.From,
+                          subject: headers.Subject,
+                          cc,
+                          msgBody: htmlBody,
+                        })
+                        .then((res) => {
+                          if (res.status == 200)
+                            console.log("message sent succesfully");
+                        })
+                        .catch((err) => {
+                          // console.log(err);
+                        });
+                    }
+                  );
+                });
+            }
+          );
+
         console.log(workflow._id, workflow.historyID);
       });
     } catch (error) {
@@ -242,6 +356,6 @@ async function listAllTopics() {
   });
 }
 
-listAllTopics().catch(console.error);
+// listAllTopics().catch(console.error);
 
 module.exports = router;

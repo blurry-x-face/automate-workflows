@@ -13,7 +13,7 @@ router.get("/", withAuth, (req, res) => {
 
 router.get("/callback", withAuth, (req, res) => {
   const { code } = req.query;
-  console.log(code);
+  // console.log(code);
   const url = `https://slack.com/api/oauth.v2.access?client_id=${keys.slackClientID}&client_secret=${keys.slackClientSecret}&redirect_uri=http://localhost:4000/api/slack/callback&code=${code}`;
   var options = {
     method: "GET",
@@ -28,7 +28,7 @@ router.get("/callback", withAuth, (req, res) => {
       const user_access_token = body.authed_user.access_token;
       const user_workspace_id = body.team.id;
       const _id = req.cookies.currentaup;
-      console.log(_id);
+      // console.log(_id);
       const getAup = await Aup.findById({ _id });
       if (!getAup) {
         return res.status(500).send("Not valid id");
@@ -37,9 +37,9 @@ router.get("/callback", withAuth, (req, res) => {
       getAup.slack_info.user_access_token = user_access_token; // dekho scene yee h ki _id sahi h getAup par dabase se model bhi aa ja raha
       // 36 se 41 ki line ka code nai chal raha h vo chalana h optional tha toh ya toh uss waqt jab bana rahe obj dummy value daal dei
       getAup.slack_info.user_workspace_id = user_workspace_id;
-      console.log(getAup);
+      // console.log(getAup);
       await getAup.save();
-      console.log(getAup);
+      // console.log(getAup);
       res.status(200).send("yipes");
     })
     .catch(function(err) {
@@ -224,7 +224,7 @@ router.post("/send", async (req, res) => {
   // temporary user email array
  // const temp_useremail = ['mansisharma78562@gmail.com','lit2019023@iiitl.ac.in' ];
   // get aupid
-  console.log(req.body);
+  // console.log(req.body);
   /*const _id = req.cookies.currentaup;
  // find aup in database
     const getAup = await Aup.findById({ _id });

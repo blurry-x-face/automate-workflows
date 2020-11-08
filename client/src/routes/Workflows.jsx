@@ -14,15 +14,17 @@ export default function Workflows() {
   }, []);
   return (
     <div>
-      <p>Aup List</p>
-      {workflows.map((v, i) => {
-        return (
-          <>
-            <Link to={`/aup/${v._id}`}>{v.aupName}</Link>
-            <Divider orientation="center">-</Divider>
-          </>
-        );
-      })}
+      <h3>Created Workflows</h3>
+      <div className="workflow-list">
+        {workflows.map((v, i) => {
+          return (
+            <>
+              <Link to={`/aup/${v._id}`}>{v.aupName}</Link>
+              <Divider orientation="center">-</Divider>
+            </>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -50,6 +50,7 @@
   justify-content: center;
   align-items: center;
   flex-direction: column;
+  margin-top: 5vh;
 }
 .aup-card-inner {
   display: flex;
@@ -59,8 +60,8 @@
   display: flex;
   justify-content: space-around;
   width: 80%;
-  margin-top: 16vh;
-  margin-bottom: 16vh;
+  margin-top: 4vh;
+  margin-bottom: 8vh;
 }
 .app-card {
   display: flex;
@@ -82,4 +83,33 @@
 .app-card p {
   margin: 0px;
   color: rgba(0, 0, 0, 0.705);
+}
+.workflow-card-content {
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.workflow-card-content button {
+  margin: 10px 0px;
+}
+.change-email {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.workflow-list {
+  margin-top: 4vh;
+  border: solid 1px #00000026;
+  border-radius: 3px;
+  padding: 10px;
+}
+.workflow-list a {
+  /* width: -webkit-fill-available; */
+  color: rgba(0, 0, 0, 0.781);
+}
+.workflow-list a:hover {
+  color: #1890ff;
 }

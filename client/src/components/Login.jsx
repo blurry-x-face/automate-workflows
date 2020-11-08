@@ -4,6 +4,7 @@ import { useCookies } from "react-cookie";
 import { Input } from "antd";
 import { Button } from "antd";
 import { Redirect } from "react-router-dom";
+import photo from "../assets/undraw_Confirmation_re_b6q5.svg";
 
 export default function Login(props) {
   const { isLogin } = props;
@@ -35,9 +36,10 @@ export default function Login(props) {
   return (
     <div className="auth-card">
       {!isLogin ? (
-        <h3>
-          <u>Welcome to Workflows</u>
-        </h3>
+        <div>
+          <h3 style={{ textAlign: "center" }}>Welcome to Workflows</h3>
+          <img src={photo} style={{ height: "15vw" }} />
+        </div>
       ) : null}
       <Input
         type="email"

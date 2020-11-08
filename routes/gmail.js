@@ -123,6 +123,84 @@ router.post(
   }
   // authUrl
 );
+
+function makeBody(
+  to,
+  from,
+  subject,
+  message,
+  threadId = "175a6f0070c76cc1",
+  messageID
+) {
+  var str = [
+    'Content-Type: text/plain; charset="UTF-8"\n',
+    "MIME-Version: 1.0\n",
+    "Content-Transfer-Encoding: 7bit\n",
+    "to: ",
+    to,
+    "\n",
+    "from: ",
+    from,
+    "\n",
+    `In-Reply-To: ${messageID}`,
+    "\n",
+    `References: ${messageID}`,
+    "\n",
+    "subject: ",
+    subject,
+    "\n\n",
+    "\n\n",
+    message,
+  ].join("");
+
+  var encodedMail = new Buffer(str)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+  return encodedMail;
+}
+router.get("/gmail/send", async (req, res) => {
+  const token = {
+    access_token:
+      "ya29.A0AfH6SMCgEPjbZEs0xm55cAB-U2MBcyBrA1Xndb2Z4hieqxpaGnbFL5RdBrwFsVISUz6ZqNqamMpzzNWLyHkkNiSMaxRx5pktGHmfjgT2g6_qqI-U6NCjp8XZvCafx0ZVHojpe8a5skm20DE1SPDBb7XpDHJtwKl6O2e9G7XGVfg",
+    refresh_token:
+      "1//0gmENeQltHvjXCgYIARAAGBASNwF-L9IrKkNa4ctEP4Uk7dxUpPZ58jW7JMkDU_wZy9P2LfeOAwUXYHY7vh82o1zWyM4vyn_U0ic",
+    scope: "https://mail.google.com/ https://www.googleapis.com/auth/drive",
+    token_type: "Bearer",
+    expiry_date: 1604785838707,
+  };
+  oAuth2Client.setCredentials(token);
+  const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+  gmail.users.messages.get(
+    { userId: "me", id: "175a6f0070c76cc1" },
+    (err, respo) => {
+      const headers = {};
+      respo.data.payload.headers.map(
+        (item, i) => (headers[item.name] = item.value)
+      );
+      console.log(headers.Subject);
+      var raw = makeBody(
+        headers.To,
+        headers.From,
+        headers.Subject,
+        "PLMS SEMD",
+        respo.threadId,
+        headers["Message-ID"]
+      );
+      gmail.users.messages.send(
+        {
+          userId: "me",
+          resource: {
+            raw: raw,
+          },
+        },
+        function (err, response) {
+          res.send(err || response);
+        }
+      );
+    }
+  );
+});
 router.post("/gmail/watch/stop", withAuth, async (req, res) => {
   const _id = req.cookies.currentaup;
   const getAup = await Aup.findById({ _id });

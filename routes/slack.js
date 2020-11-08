@@ -310,7 +310,7 @@ router.post("/send",  async (req, res) => {
               {
                 "type": "section",
                 "text": {
-                  "type": "mrkdwn",
+                  // "type": "mrkdwn",
                   "text": ` *Sent at*: ${internalDate}.`
                 }
               },
